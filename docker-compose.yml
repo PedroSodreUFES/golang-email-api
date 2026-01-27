@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    ports:
+      - ${GOEMAIL_DATABASE_PORT:-5432}:5432
+    environment:
+      POSTGRES_USER: ${GOEMAIL_DATABASE_USER}
+      POSTGRES_PASSWORD: ${GOEMAIL_DATABASE_PASSWORD}
+      POSTGRES_DB: ${GOEMAIL_DATABASE_NAME}
+    volumes:
+      - db:/var/lib/postgresql
+
+volumes:
+  db:
+    driver: local

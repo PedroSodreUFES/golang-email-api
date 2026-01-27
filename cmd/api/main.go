@@ -1,0 +1,43 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+)
+
+func main() {
+	router := gin.Default()
+
+	if err := godotenv.Load(); err != nil {
+		panic(err)
+	}
+
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s",
+		os.Getenv("GOEMAIL_DATABASE_USER"),
+		os.Getenv("GOEMAIL_DATABASE_PASSWORD"),
+		os.Getenv("GOEMAIL_DATABASE_HOST"),
+		os.Getenv("GOEMAIL_DATABASE_PORT"),
+		os.Getenv("GOEMAIL_DATABASE_NAME"),
+	))
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer pool.Close()
+
+	if err := pool.Ping(ctx); err != nil {
+		panic(err)
+	}
+
+	if err = router.Run(":8080"); err != nil {
+		log.Fatal(err)
+	}
+}
