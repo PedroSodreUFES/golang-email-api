@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"main/internal/users/controller"
+	"main/internal/users/repositories"
+	"main/internal/users/service"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +39,12 @@ func main() {
 	if err := pool.Ping(ctx); err != nil {
 		panic(err)
 	}
+
+	usersRepository := repositories.NewPostgreUserRepository(pool)
+	userService := service.NewUserService(usersRepository)
+	userController := controller.NewUserController(userService)
+
+	userController.RegisterRoutes(router)
 
 	if err = router.Run(":8080"); err != nil {
 		log.Fatal(err)

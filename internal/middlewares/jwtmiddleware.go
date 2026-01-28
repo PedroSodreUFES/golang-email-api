@@ -17,6 +17,6 @@ func JWTMiddleware() gin.HandlerFunc {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": errorForbidden.Error()})
 		return
 		
-		c.Next()
+		// c.Next()
 	}
 }
