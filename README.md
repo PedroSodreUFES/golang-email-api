@@ -10,6 +10,7 @@
 + Go Language
 + PostgreSQL
 + Gin framework
++ Pacote aws
 + Pacote errors
 + Pacote json
 + Pacote jwt
@@ -27,10 +28,10 @@ Após criar um arquivo .env, faça:
 docker-compose up -d
 go mod tidy
 go run ./cmd/tern
-sqlc generate -f internal/store/pgstore/sqlc.yml
+go run ./cmd/sqlc
 go run ./cmd/api
 ```
-OBS: Requer Docker, Go e SQLc instalados em seu computador
+OBS: Requer Docker, Go, SQLc e Tern instalados em seu computador
 
 ### Como parar o container Docker e excluir os dados
 ```bash
