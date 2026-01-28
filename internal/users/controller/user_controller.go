@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"main/internal/middlewares"
 	"main/internal/users/models"
 
 	"github.com/gin-gonic/gin"
@@ -17,22 +18,21 @@ func NewUserController(userService models.UserService) *UserController {
 }
 
 func (c *UserController) RegisterRoutes(router *gin.Engine) {
-	users := router.Group("/user")
+	public := router.Group("/user")
 	{
-		users.DELETE("/me", c.DeleteSelf)
-		users.GET("/me", c.GetSelf)
-		users.GET("/:id/email", c.GetUserByEmail)
-		users.POST("", c.SignUp)
-		users.POST("/login", c.Login)
-		users.PUT("/photo", c.UpdateUserPhoto)
+		public.POST("", c.SignUp)
+		public.POST("/login", c.Login)
+	}
+	private := router.Group("/user")
+	private.Use(middlewares.JWTMiddleware())
+	{
+		private.DELETE("/me", c.DeleteSelf)
+		private.GET("/me", c.GetSelf)
+		private.PUT("/photo", c.UpdateUserPhoto)
 	}
 }
 
 func (c *UserController) GetSelf(ctx *gin.Context) {
-
-}
-
-func (c *UserController) GetUserByEmail(ctx *gin.Context) {
 
 }
 
