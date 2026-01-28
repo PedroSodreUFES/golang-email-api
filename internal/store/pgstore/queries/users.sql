@@ -5,11 +5,7 @@ INSERT INTO users (
 RETURNING *;
 
 -- name: GetUserByEmail :one
-SELECT
-    id,
-    full_name,
-    password_hash,
-    profile_picture
+SELECT *
 FROM users
 WHERE email = $1;
 

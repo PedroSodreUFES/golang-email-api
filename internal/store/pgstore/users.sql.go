@@ -48,28 +48,18 @@ func (q *Queries) DeleteUserById(ctx context.Context, id int32) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT
-    id,
-    full_name,
-    password_hash,
-    profile_picture
+SELECT id, full_name, email, password_hash, profile_picture
 FROM users
 WHERE email = $1
 `
 
-type GetUserByEmailRow struct {
-	ID             int32       `json:"id"`
-	FullName       string      `json:"full_name"`
-	PasswordHash   string      `json:"password_hash"`
-	ProfilePicture pgtype.Text `json:"profile_picture"`
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.FullName,
+		&i.Email,
 		&i.PasswordHash,
 		&i.ProfilePicture,
 	)

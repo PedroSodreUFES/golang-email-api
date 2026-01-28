@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"errors"
 	"main/internal/exceptions"
+	"main/internal/jsonutils"
 	"main/internal/middlewares"
 	"main/internal/users/DTO/requests"
 	"main/internal/users/models"
@@ -36,25 +38,35 @@ func (c *UserController) RegisterRoutes(router *gin.Engine) {
 }
 
 func (c *UserController) getSelf(ctx *gin.Context) {
-	
+
 }
 
 func (c *UserController) signUp(ctx *gin.Context) {
-	var request requests.CreateUserRequest
+	var body requests.CreateUserRequest
 
-	err := ctx.ShouldBindJSON(&request)
+	body, problems, err := jsonutils.DecodeValidJson[requests.CreateUserRequest](ctx.Request)
 	if err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": exceptions.ErrUnproccessableEntity.Error()})
+		if errors.Is(err, jsonutils.ErrFailedToDecodeJson) {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": exceptions.ErrUnproccessableEntity.Error()})
+			return
+		}
+		ctx.JSON(http.StatusBadRequest, problems)
 		return
 	}
 
-	user, err := c.userService.SignUp(ctx.Request.Context(), &request)
+	response, err := c.userService.SignUp(ctx.Request.Context(), &body)
 	if err != nil {
+		// Erro de email não único
+		if errors.Is(err, exceptions.ErrEmailShouldBeUnique) {
+			ctx.JSON(http.StatusConflict, gin.H{"error": exceptions.ErrEmailShouldBeUnique.Error()})
+			return
+		}
+		// Algum outro erro
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, user)
+	ctx.JSON(http.StatusCreated, response)
 }
 
 func (c *UserController) updateUserPhoto(ctx *gin.Context) {
