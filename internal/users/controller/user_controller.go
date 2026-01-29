@@ -38,6 +38,7 @@ func (c *UserController) RegisterRoutes(router *gin.Engine) {
 		private.DELETE("/me", c.deleteSelf)
 		private.GET("/me", c.getSelf)
 		private.PUT("/me/photo", c.updateUserPhoto)
+		private.DELETE("/me/photo", c.deleteSelfImage)
 	}
 }
 
@@ -145,6 +146,31 @@ func (c *UserController) updateUserPhoto(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, nil)
 }
 
+func (c *UserController) deleteSelfImage(ctx *gin.Context) {
+	val, ok := ctx.Get(middlewares.IDKey)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
+		return
+	}
+
+	userID, ok := val.(int32)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
+		return
+	}
+
+	err := c.userService.DeleteUserPhoto(ctx.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, exceptions.ErrUserNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": exceptions.ErrUserNotFound.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
+}
 func (c *UserController) deleteSelf(ctx *gin.Context) {
 	val, ok := ctx.Get(middlewares.IDKey)
 	if !ok {

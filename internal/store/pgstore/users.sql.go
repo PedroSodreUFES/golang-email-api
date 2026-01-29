@@ -50,6 +50,20 @@ func (q *Queries) DeleteUserById(ctx context.Context, id int32) (int64, error) {
 	return result.RowsAffected(), nil
 }
 
+const deleteUserProfilePhoto = `-- name: DeleteUserProfilePhoto :execrows
+UPDATE users
+SET profile_picture = NULL
+WHERE id = $1
+`
+
+func (q *Queries) DeleteUserProfilePhoto(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUserProfilePhoto, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, full_name, email, password_hash, profile_picture
 FROM users

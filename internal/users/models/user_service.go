@@ -13,4 +13,5 @@ type UserService interface{
 	GetMe(ctx context.Context, id int32) (*responses.MeResponse, error)
 	SignUp(ctx context.Context, request *requests.CreateUserRequest) (*responses.SignUpResponse, error)
 	UpdateUserPhoto(ctx context.Context, id int32, file *multipart.FileHeader) error
+	DeleteUserPhoto(ctx context.Context, id int32) error
 }

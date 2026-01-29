@@ -107,7 +107,7 @@ func (u *UserService) UpdateUserPhoto(ctx context.Context, id int32, file *multi
 		return err
 	}
 	old := strings.TrimSpace(user.ProfilePicture)
-	
+
 	f, err := file.Open()
 	if err != nil {
 		return err
@@ -144,13 +144,38 @@ func (u *UserService) UpdateUserPhoto(ctx context.Context, id int32, file *multi
 	}
 
 	if old != "" {
-		fmt.Println(old)
 		oldKey := utils.ExtractR2Key(old)
 		if oldKey != "" && oldKey != key {
-			_ = u.imageStore.Delete(ctx, oldKey)
+			err = u.imageStore.Delete(ctx, oldKey)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return u.userRepository.ChangeProfilePicture(ctx, id, valueToStore)
 }
 
+func (u *UserService) DeleteUserPhoto(ctx context.Context, id int32) error {
+	user, err := u.userRepository.FindUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+	actualPhoto := strings.TrimSpace(user.ProfilePicture)
+
+	// Só deleta a foto antiga se ela existir
+	if actualPhoto != "" {
+		oldKey := utils.ExtractR2Key(actualPhoto)
+		err = u.imageStore.Delete(ctx, oldKey)
+		if err != nil {
+			return err
+		}
+
+		err = u.userRepository.DeleteProfilePicture(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

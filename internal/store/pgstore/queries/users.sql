@@ -19,6 +19,11 @@ UPDATE users
 SET profile_picture = $2
 WHERE id = $1;
 
+-- name: DeleteUserProfilePhoto :execrows
+UPDATE users
+SET profile_picture = NULL
+WHERE id = $1;
+
 -- name: DeleteUserById :execrows
 DELETE FROM users
 WHERE id = $1;

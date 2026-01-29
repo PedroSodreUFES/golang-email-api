@@ -67,6 +67,19 @@ func (p *PostgresqlUserRepository) CreateUser(ctx context.Context, request *requ
 	}, nil
 }
 
+func(p *PostgresqlUserRepository) DeleteProfilePicture(ctx context.Context, id int32) (error) {
+	rows, err := p.queries.DeleteUserProfilePhoto(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return exceptions.ErrUserNotFound
+	}
+
+	return nil
+}
+
 func (p *PostgresqlUserRepository) DeleteUserById(ctx context.Context, id int32) error {
 	rows, err := p.queries.DeleteUserById(ctx, id)
 	if err != nil {
