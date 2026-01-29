@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"main/internal/auth"
+	imagestore "main/internal/store/image_store"
 	"main/internal/users/controller"
 	"main/internal/users/repositories"
 	"main/internal/users/service"
@@ -18,6 +19,7 @@ import (
 
 func main() {
 	router := gin.Default()
+	router.MaxMultipartMemory = 8 << 20 // 8MB
 
 	if err := godotenv.Load(); err != nil {
 		panic(err)
@@ -44,11 +46,22 @@ func main() {
 
 	secret := os.Getenv("GOEMAIL_JWT_KEY")
 	jwtMaker := auth.JWTMaker{
-		Secret: []byte(secret),
+		Secret:   []byte(secret),
 		Duration: time.Hour * 2,
 	}
+	r2, err := imagestore.NewR2Store(ctx, imagestore.R2Config{
+		AccountID:       os.Getenv("R2_ACCOUNT_ID"),
+		AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
+		Bucket:          os.Getenv("R2_BUCKET"),
+		PublicBaseURL:   os.Getenv("R2_PUBLIC_BASE_URL"),
+	})
+	
+	if err != nil {
+		panic(err)
+	}
 	usersRepository := repositories.NewPostgreUserRepository(pool)
-	userService := service.NewUserService(usersRepository, jwtMaker)
+	userService := service.NewUserService(usersRepository, jwtMaker, r2)
 	userController := controller.NewUserController(userService, jwtMaker.Secret)
 
 	userController.RegisterRoutes(router)

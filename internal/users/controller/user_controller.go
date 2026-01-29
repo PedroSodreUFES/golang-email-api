@@ -8,6 +8,8 @@ import (
 	"main/internal/users/DTO/requests"
 	"main/internal/users/models"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,7 +54,7 @@ func (c *UserController) getSelf(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.userService.GetMe(ctx, userID)
+	user, err := c.userService.GetMe(ctx.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, exceptions.ErrUserNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": exceptions.ErrUserNotFound.Error()})
@@ -99,34 +101,48 @@ func (c *UserController) updateUserPhoto(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
 		return
 	}
-
 	userID, ok := val.(int32)
 	if !ok {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
 		return
 	}
 
-	var body requests.ChangeMyPhotoRequest
-	body, problems, err := jsonutils.DecodeValidJson[requests.ChangeMyPhotoRequest](ctx.Request)
+	// pegar arquivo
+	fileHeader, err := ctx.FormFile("photo") // nome do campo no form-data
 	if err != nil {
-		if errors.Is(err, jsonutils.ErrFailedToDecodeJson) {
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": exceptions.ErrUnproccessableEntity.Error()})
-			return
-		}
-		ctx.JSON(http.StatusBadRequest, problems)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "photo is required"})
 		return
 	}
-	
-	err = c.userService.UpdateUserPhoto(ctx, userID, body.ProfilePicture)
-	
-	if err != nil {
+
+	// validar arquivo
+	// -- extensão
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid file type"})
+		return
+	}
+	// -- tamanho
+	const maxSize = 8 << 20 // 8 MB
+	if fileHeader.Size > maxSize {
+		ctx.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "file too large (max 8MB)"})
+		return
+	}
+
+	// service + resposta
+	if err := c.userService.UpdateUserPhoto(ctx.Request.Context(), userID, fileHeader); err != nil {
 		if errors.Is(err, exceptions.ErrUserNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": exceptions.ErrUserNotFound.Error()})
+			return
+		}
+		if errors.Is(err, exceptions.ErrTimeoutExceeded) {
+			ctx.JSON(http.StatusGatewayTimeout, gin.H{"error": exceptions.ErrTimeoutExceeded.Error()})
 			return
 		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
 		return
 	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }
 
 func (c *UserController) deleteSelf(ctx *gin.Context) {
@@ -142,7 +158,7 @@ func (c *UserController) deleteSelf(ctx *gin.Context) {
 		return
 	}
 
-	err := c.userService.DeleteUser(ctx, userID)
+	err := c.userService.DeleteUser(ctx.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, exceptions.ErrUserNotFound) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": exceptions.ErrUserNotFound.Error()})

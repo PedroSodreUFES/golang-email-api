@@ -3,11 +3,19 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"main/internal/auth"
 	"main/internal/exceptions"
+	imagestore "main/internal/store/image_store"
 	"main/internal/users/DTO/requests"
 	"main/internal/users/DTO/responses"
 	"main/internal/users/models"
+	"main/internal/utils"
+	"mime/multipart"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,12 +23,14 @@ import (
 type UserService struct {
 	userRepository models.UserRepository
 	jwtMaker       auth.JWTMaker
+	imageStore     imagestore.ImageStore
 }
 
-func NewUserService(userRepository models.UserRepository, jwtMaker auth.JWTMaker) models.UserService {
+func NewUserService(userRepository models.UserRepository, jwtMaker auth.JWTMaker, imageStore imagestore.ImageStore) models.UserService {
 	return &UserService{
 		userRepository: userRepository,
 		jwtMaker:       jwtMaker,
+		imageStore:     imageStore,
 	}
 }
 
@@ -91,11 +101,56 @@ func (u *UserService) SignUp(ctx context.Context, request *requests.CreateUserRe
 	}, nil
 }
 
-func (u *UserService) UpdateUserPhoto(ctx context.Context, id int32, new_photo string) error {
-	err := u.userRepository.ChangeProfilePicture(ctx, id, new_photo)
+func (u *UserService) UpdateUserPhoto(ctx context.Context, id int32, file *multipart.FileHeader) error {
+	user, err := u.userRepository.FindUserById(ctx, id)
 	if err != nil {
 		return err
 	}
+	old := strings.TrimSpace(user.ProfilePicture)
+	
+	f, err := file.Open()
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-	return nil
+	rs, ok := f.(io.ReadSeeker)
+	if !ok {
+		return fmt.Errorf("file is not seekable")
+	}
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	key := fmt.Sprintf("users/%d/profile_%d%s", id, time.Now().UnixNano(), ext)
+
+	contentType := "application/octet-stream"
+	switch ext {
+	case ".png":
+		contentType = "image/png"
+	case ".jpg", ".jpeg":
+		contentType = "image/jpeg"
+	case ".webp":
+		contentType = "image/webp"
+	}
+
+	publicURL, err := u.imageStore.Upload(ctx, key, rs, file.Size, contentType)
+	if err != nil {
+		_ = u.imageStore.Delete(ctx, key)
+		return err
+	}
+
+	valueToStore := key
+	if publicURL != "" {
+		valueToStore = publicURL
+	}
+
+	if old != "" {
+		fmt.Println(old)
+		oldKey := utils.ExtractR2Key(old)
+		if oldKey != "" && oldKey != key {
+			_ = u.imageStore.Delete(ctx, oldKey)
+		}
+	}
+
+	return u.userRepository.ChangeProfilePicture(ctx, id, valueToStore)
 }
+
