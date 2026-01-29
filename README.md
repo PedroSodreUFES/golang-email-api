@@ -17,7 +17,6 @@
 + Pacote http
 + Pacote log
 + Pacote pgx/v5 
-+ Pacote validator
 + SQLc
 + Tern
 + Docker
