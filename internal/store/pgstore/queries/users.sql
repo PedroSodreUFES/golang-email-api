@@ -14,7 +14,7 @@ SELECT *
 FROM users
 WHERE id = $1;
 
--- name: UpdateUserProfilePhoto :exec
+-- name: UpdateUserProfilePhoto :execrows
 UPDATE users
 SET profile_picture = $2
 WHERE id = $1;

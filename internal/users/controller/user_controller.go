@@ -94,7 +94,39 @@ func (c *UserController) signUp(ctx *gin.Context) {
 }
 
 func (c *UserController) updateUserPhoto(ctx *gin.Context) {
+	val, ok := ctx.Get(middlewares.IDKey)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
+		return
+	}
 
+	userID, ok := val.(int32)
+	if !ok {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
+		return
+	}
+
+	var body requests.ChangeMyPhotoRequest
+	body, problems, err := jsonutils.DecodeValidJson[requests.ChangeMyPhotoRequest](ctx.Request)
+	if err != nil {
+		if errors.Is(err, jsonutils.ErrFailedToDecodeJson) {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": exceptions.ErrUnproccessableEntity.Error()})
+			return
+		}
+		ctx.JSON(http.StatusBadRequest, problems)
+		return
+	}
+	
+	err = c.userService.UpdateUserPhoto(ctx, userID, body.ProfilePicture)
+	
+	if err != nil {
+		if errors.Is(err, exceptions.ErrUserNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": exceptions.ErrUserNotFound.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": exceptions.ErrInternalServerError.Error()})
+		return
+	}
 }
 
 func (c *UserController) deleteSelf(ctx *gin.Context) {

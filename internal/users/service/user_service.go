@@ -91,7 +91,11 @@ func (u *UserService) SignUp(ctx context.Context, request *requests.CreateUserRe
 	}, nil
 }
 
-// UpdateUserPhoto implements [models.UserService].
-func (u *UserService) UpdateUserPhoto(ctx context.Context, id int32) error {
-	panic("unimplemented")
+func (u *UserService) UpdateUserPhoto(ctx context.Context, id int32, new_photo string) error {
+	err := u.userRepository.ChangeProfilePicture(ctx, id, new_photo)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

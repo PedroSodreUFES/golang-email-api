@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,15 +24,26 @@ func NewPostgreUserRepository(pool *pgxpool.Pool) models.UserRepository {
 	}
 }
 
-// ChangeProfilePicture implements [models.UserRepository].
 func (p *PostgresqlUserRepository) ChangeProfilePicture(ctx context.Context, id int32, profile_picture_link string) error {
-	panic("unimplemented")
+	rows, err := p.queries.UpdateUserProfilePhoto(ctx, pgstore.UpdateUserProfilePhotoParams{
+		ID:             id,
+		ProfilePicture: pgtype.Text{String: profile_picture_link, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return exceptions.ErrUserNotFound
+	}
+
+	return nil
 }
 
 func (p *PostgresqlUserRepository) CreateUser(ctx context.Context, request *requests.CreateUserRequest) (*models.User, error) {
 	user, err := p.queries.CreateUser(ctx, pgstore.CreateUserParams{
-		FullName: request.FullName,
-		Email: request.Email,
+		FullName:     request.FullName,
+		Email:        request.Email,
 		PasswordHash: request.Password,
 	})
 	if err != nil {
@@ -47,10 +59,10 @@ func (p *PostgresqlUserRepository) CreateUser(ctx context.Context, request *requ
 	}
 
 	return &models.User{
-		ID: user.ID,
-		FullName: user.FullName,
-		PasswordHash: "",
-		Email: user.Email,
+		ID:             user.ID,
+		FullName:       user.FullName,
+		PasswordHash:   "",
+		Email:          user.Email,
 		ProfilePicture: user.ProfilePicture.String,
 	}, nil
 }
@@ -78,15 +90,14 @@ func (p *PostgresqlUserRepository) FindUserByEmail(ctx context.Context, email st
 	}
 
 	return &models.User{
-		ID: user.ID,
-		FullName: user.FullName,
-		PasswordHash: user.PasswordHash,
-		Email: user.Email,
+		ID:             user.ID,
+		FullName:       user.FullName,
+		PasswordHash:   user.PasswordHash,
+		Email:          user.Email,
 		ProfilePicture: user.ProfilePicture.String,
 	}, nil
 }
 
-// FindUserById implements [models.UserRepository].
 func (p *PostgresqlUserRepository) FindUserById(ctx context.Context, id int32) (*models.User, error) {
 	user, err := p.queries.GetUserById(ctx, id)
 	if err != nil {
@@ -97,10 +108,10 @@ func (p *PostgresqlUserRepository) FindUserById(ctx context.Context, id int32) (
 	}
 
 	return &models.User{
-		ID: user.ID,
-		FullName: user.FullName,
-		PasswordHash: user.PasswordHash,
-		Email: user.Email,
+		ID:             user.ID,
+		FullName:       user.FullName,
+		PasswordHash:   user.PasswordHash,
+		Email:          user.Email,
 		ProfilePicture: user.ProfilePicture.String,
 	}, nil
 }

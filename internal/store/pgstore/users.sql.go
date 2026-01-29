@@ -88,7 +88,7 @@ func (q *Queries) GetUserById(ctx context.Context, id int32) (User, error) {
 	return i, err
 }
 
-const updateUserProfilePhoto = `-- name: UpdateUserProfilePhoto :exec
+const updateUserProfilePhoto = `-- name: UpdateUserProfilePhoto :execrows
 UPDATE users
 SET profile_picture = $2
 WHERE id = $1
@@ -99,7 +99,10 @@ type UpdateUserProfilePhotoParams struct {
 	ProfilePicture pgtype.Text `json:"profile_picture"`
 }
 
-func (q *Queries) UpdateUserProfilePhoto(ctx context.Context, arg UpdateUserProfilePhotoParams) error {
-	_, err := q.db.Exec(ctx, updateUserProfilePhoto, arg.ID, arg.ProfilePicture)
-	return err
+func (q *Queries) UpdateUserProfilePhoto(ctx context.Context, arg UpdateUserProfilePhotoParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateUserProfilePhoto, arg.ID, arg.ProfilePicture)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
