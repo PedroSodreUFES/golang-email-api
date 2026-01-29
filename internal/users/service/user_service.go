@@ -3,38 +3,72 @@ package service
 import (
 	"context"
 	"errors"
+	"main/internal/auth"
 	"main/internal/exceptions"
 	"main/internal/users/DTO/requests"
 	"main/internal/users/DTO/responses"
 	"main/internal/users/models"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
 	userRepository models.UserRepository
+	jwtMaker       auth.JWTMaker
 }
 
-func NewUserService(userRepository models.UserRepository) models.UserService {
+func NewUserService(userRepository models.UserRepository, jwtMaker auth.JWTMaker) models.UserService {
 	return &UserService{
 		userRepository: userRepository,
+		jwtMaker:       jwtMaker,
 	}
 }
 
-// AuthenticateUser implements [models.UserService].
 func (u *UserService) AuthenticateUser(ctx context.Context, request *requests.LoginRequest) (*responses.LoginResponse, error) {
-	panic("unimplemented")
+	user, err := u.userRepository.FindUserByEmail(ctx, request.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return nil, exceptions.ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	token, err := u.jwtMaker.GenerateToken(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &responses.LoginResponse{
+		Token: token,
+	}, nil
 }
 
-// DeleteUser implements [models.UserService].
 func (u *UserService) DeleteUser(ctx context.Context, id int32) error {
-	panic("unimplemented")
+	err := u.userRepository.DeleteUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// GetMe implements [models.UserService].
-func (u *UserService) GetMe(ctx context.Context, token string) {
-	panic("unimplemented")
+func (u *UserService) GetMe(ctx context.Context, id int32) (*responses.MeResponse, error) {
+	user, err := u.userRepository.FindUserById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &responses.MeResponse{
+		ID:             user.ID,
+		FullName:       user.FullName,
+		Email:          user.Email,
+		ProfilePicture: &user.ProfilePicture,
+	}, nil
 }
 
 func (u *UserService) SignUp(ctx context.Context, request *requests.CreateUserRequest) (*responses.SignUpResponse, error) {
@@ -46,21 +80,13 @@ func (u *UserService) SignUp(ctx context.Context, request *requests.CreateUserRe
 
 	user, err := u.userRepository.CreateUser(ctx, request)
 	if err != nil {
-		// Se erro for de unique field
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return nil, exceptions.ErrEmailShouldBeUnique
-			}
-		}
-		// se error não for de unique field
 		return nil, err
 	}
 
 	return &responses.SignUpResponse{
-		ID: user.ID,
-		FullName: user.FullName,
-		Email: user.Email,
+		ID:             user.ID,
+		FullName:       user.FullName,
+		Email:          user.Email,
 		ProfilePicture: nil,
 	}, nil
 }

@@ -10,11 +10,7 @@ FROM users
 WHERE email = $1;
 
 -- name: GetUserById :one
-SELECT
-    id,
-    full_name,
-    password_hash,
-    profile_picture
+SELECT *
 FROM users
 WHERE id = $1;
 
@@ -23,6 +19,6 @@ UPDATE users
 SET profile_picture = $2
 WHERE id = $1;
 
--- name: DeleteUserById :exec
+-- name: DeleteUserById :execrows
 DELETE FROM users
 WHERE id = $1;

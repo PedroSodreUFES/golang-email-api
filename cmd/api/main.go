@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"main/internal/auth"
 	"main/internal/users/controller"
 	"main/internal/users/repositories"
 	"main/internal/users/service"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,9 +42,14 @@ func main() {
 		panic(err)
 	}
 
+	secret := os.Getenv("GOEMAIL_JWT_KEY")
+	jwtMaker := auth.JWTMaker{
+		Secret: []byte(secret),
+		Duration: time.Hour * 2,
+	}
 	usersRepository := repositories.NewPostgreUserRepository(pool)
-	userService := service.NewUserService(usersRepository)
-	userController := controller.NewUserController(userService)
+	userService := service.NewUserService(usersRepository, jwtMaker)
+	userController := controller.NewUserController(userService, jwtMaker.Secret)
 
 	userController.RegisterRoutes(router)
 

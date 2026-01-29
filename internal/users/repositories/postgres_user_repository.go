@@ -2,10 +2,14 @@ package repositories
 
 import (
 	"context"
+	"errors"
+	"main/internal/exceptions"
 	"main/internal/store/pgstore"
 	"main/internal/users/DTO/requests"
 	"main/internal/users/models"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,8 +34,15 @@ func (p *PostgresqlUserRepository) CreateUser(ctx context.Context, request *requ
 		Email: request.Email,
 		PasswordHash: request.Password,
 	})
-
 	if err != nil {
+		// Se erro for de unique field
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nil, exceptions.ErrEmailShouldBeUnique
+			}
+		}
+		// outro erro
 		return nil, err
 	}
 
@@ -44,17 +55,52 @@ func (p *PostgresqlUserRepository) CreateUser(ctx context.Context, request *requ
 	}, nil
 }
 
-// DeleteUserById implements [models.UserRepository].
 func (p *PostgresqlUserRepository) DeleteUserById(ctx context.Context, id int32) error {
-	panic("unimplemented")
+	rows, err := p.queries.DeleteUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return exceptions.ErrUserNotFound
+	}
+
+	return nil
 }
 
-// FindUserByEmail implements [models.UserRepository].
 func (p *PostgresqlUserRepository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	panic("unimplemented")
+	user, err := p.queries.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, exceptions.ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	return &models.User{
+		ID: user.ID,
+		FullName: user.FullName,
+		PasswordHash: user.PasswordHash,
+		Email: user.Email,
+		ProfilePicture: user.ProfilePicture.String,
+	}, nil
 }
 
 // FindUserById implements [models.UserRepository].
 func (p *PostgresqlUserRepository) FindUserById(ctx context.Context, id int32) (*models.User, error) {
-	panic("unimplemented")
+	user, err := p.queries.GetUserById(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, exceptions.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	return &models.User{
+		ID: user.ID,
+		FullName: user.FullName,
+		PasswordHash: user.PasswordHash,
+		Email: user.Email,
+		ProfilePicture: user.ProfilePicture.String,
+	}, nil
 }

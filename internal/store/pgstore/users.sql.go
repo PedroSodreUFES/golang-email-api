@@ -37,14 +37,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const deleteUserById = `-- name: DeleteUserById :exec
+const deleteUserById = `-- name: DeleteUserById :execrows
 DELETE FROM users
 WHERE id = $1
 `
 
-func (q *Queries) DeleteUserById(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteUserById, id)
-	return err
+func (q *Queries) DeleteUserById(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUserById, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -67,28 +70,18 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT
-    id,
-    full_name,
-    password_hash,
-    profile_picture
+SELECT id, full_name, email, password_hash, profile_picture
 FROM users
 WHERE id = $1
 `
 
-type GetUserByIdRow struct {
-	ID             int32       `json:"id"`
-	FullName       string      `json:"full_name"`
-	PasswordHash   string      `json:"password_hash"`
-	ProfilePicture pgtype.Text `json:"profile_picture"`
-}
-
-func (q *Queries) GetUserById(ctx context.Context, id int32) (GetUserByIdRow, error) {
+func (q *Queries) GetUserById(ctx context.Context, id int32) (User, error) {
 	row := q.db.QueryRow(ctx, getUserById, id)
-	var i GetUserByIdRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.FullName,
+		&i.Email,
 		&i.PasswordHash,
 		&i.ProfilePicture,
 	)
