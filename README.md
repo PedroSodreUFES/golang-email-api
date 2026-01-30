@@ -12,8 +12,9 @@
 + Gin framework
 + Pacote aws
 + Pacote errors
++ Pacote godotenv
 + Pacote json
-+ Pacote jwt
++ Pacote jwt/v5
 + Pacote http
 + Pacote log
 + Pacote pgx/v5 
@@ -37,10 +38,9 @@ OBS: Requer Docker, Go, SQLc e Tern instalados em seu computador
 docker-compose down -v
 ```
 
-## Observação Importante
-Talvez sua conexão de rede bloqueie o envio dos arquivos para a cloudflare. 
-Teste com seu 4g as rotas de envio de arquivos(obs: limite dos arquivos é de 8MB)
+### Observação Importante
+> Talvez sua conexão de rede bloqueie o envio dos arquivos para a cloudflare. 
+> Se isso ocorrer, teste com seu 4g as rotas de envio de arquivos(obs: limite dos arquivos é de 8MB)
 
 ### Diagrama relacional
-
 ![Diagrama relacional](diagrama_relacional.png)
