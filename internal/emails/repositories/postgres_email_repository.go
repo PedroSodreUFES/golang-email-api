@@ -151,6 +151,9 @@ func (p *PostgresqlEmailRepository) GetMySentEmails(ctx context.Context, id int3
 func (p *PostgresqlEmailRepository) UpdateEmailById(ctx context.Context, id int32) (*models.Email, error) {
 	email, err := p.queries.UpdateAndGetEmailByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, exceptions.ErrEmailNotFound
+		}
 		return nil, err
 	}
 
@@ -162,5 +165,5 @@ func (p *PostgresqlEmailRepository) UpdateEmailById(ctx context.Context, id int3
 		CreatedAt:  email.CreatedAt.Time,
 		IDReceiver: email.IDReceiver,
 		IDSender:   email.IDSender,
-	}, nil	
+	}, nil
 }
