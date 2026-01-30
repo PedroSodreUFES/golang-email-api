@@ -8,6 +8,9 @@ import (
 	imagestore "main/internal/store/image_store"
 	"main/internal/users/controller"
 	"main/internal/users/repositories"
+	emailRepo "main/internal/emails/repositories"
+	emailServ "main/internal/emails/service"
+	emailContr "main/internal/emails/controllers"
 	"main/internal/users/service"
 	"os"
 	"time"
@@ -60,11 +63,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	
 	usersRepository := repositories.NewPostgreUserRepository(pool)
 	userService := service.NewUserService(usersRepository, jwtMaker, r2)
 	userController := controller.NewUserController(userService, jwtMaker.Secret)
 
+	emailsRepository := emailRepo.NewPostgreEmailRepository(pool)
+	emailsService := emailServ.NewEmailService(emailsRepository, usersRepository)
+	emailsController := emailContr.NewEmailController(emailsService, jwtMaker.Secret)
+	
 	userController.RegisterRoutes(router)
+	emailsController.RegisterRoutes(router)
 
 	if err = router.Run(":8080"); err != nil {
 		log.Fatal(err)
