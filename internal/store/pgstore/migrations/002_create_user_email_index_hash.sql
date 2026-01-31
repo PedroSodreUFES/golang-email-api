@@ -1,5 +1,5 @@
 -- Write your migrate up statements here
-CREATE INDEX idx_users_email_hash
+CREATE UNIQUE INDEX idx_users_email_hash
     ON users(email);
 ---- create above / drop below ----
 DROP INDEX idx_users_email_hash;
